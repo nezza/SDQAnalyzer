@@ -38,8 +38,8 @@ cpp_files = glob.glob( "*.cpp" );
 os.chdir( ".." )
 
 #specify the search paths/dependencies/options for gcc
-include_paths = [ "../include" ]
-link_paths = [ "../lib" ]
+include_paths = [ "./AnalyzerSDK/include" ]
+link_paths = [ "./AnalyzerSDK/lib" ]
 link_dependencies = [ "-lAnalyzer" ] #refers to libAnalyzer.dylib or libAnalyzer.so
 
 debug_compile_flags = "-O0 -w -c -fpic -g"
