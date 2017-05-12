@@ -3,7 +3,7 @@
 #include <AnalyzerChannelData.h>
 
 SimpleSerialAnalyzer::SimpleSerialAnalyzer()
-:	Analyzer(),  
+:	Analyzer2(),  
 	mSettings( new SimpleSerialAnalyzerSettings() ),
 	mSimulationInitilized( false )
 {
@@ -15,12 +15,15 @@ SimpleSerialAnalyzer::~SimpleSerialAnalyzer()
 	KillThread();
 }
 
-void SimpleSerialAnalyzer::WorkerThread()
+void SimpleSerialAnalyzer::SetupResults()
 {
 	mResults.reset( new SimpleSerialAnalyzerResults( this, mSettings.get() ) );
 	SetAnalyzerResults( mResults.get() );
 	mResults->AddChannelBubblesWillAppearOn( mSettings->mInputChannel );
+}
 
+void SimpleSerialAnalyzer::WorkerThread()
+{
 	mSampleRateHz = GetSampleRate();
 
 	mSerial = GetAnalyzerChannelData( mSettings->mInputChannel );

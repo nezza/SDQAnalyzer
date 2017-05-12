@@ -60,22 +60,23 @@ void SimpleSerialAnalyzerResults::GenerateExportFile( const char* file, DisplayB
 
 void SimpleSerialAnalyzerResults::GenerateFrameTabularText( U64 frame_index, DisplayBase display_base )
 {
+#ifdef SUPPORTS_PROTOCOL_SEARCH
 	Frame frame = GetFrame( frame_index );
-	ClearResultStrings();
+	ClearTabularText();
 
 	char number_str[128];
 	AnalyzerHelpers::GetNumberString( frame.mData1, display_base, 8, number_str, 128 );
-	AddResultString( number_str );
+	AddTabularText( number_str );
+#endif
 }
 
 void SimpleSerialAnalyzerResults::GeneratePacketTabularText( U64 packet_id, DisplayBase display_base )
 {
-	ClearResultStrings();
-	AddResultString( "not supported" );
+	//not supported
+
 }
 
 void SimpleSerialAnalyzerResults::GenerateTransactionTabularText( U64 transaction_id, DisplayBase display_base )
 {
-	ClearResultStrings();
-	AddResultString( "not supported" );
+	//not supported
 }
