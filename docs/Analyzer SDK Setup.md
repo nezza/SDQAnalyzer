@@ -29,44 +29,33 @@ Once you have set that directory and restarted the software, your new custom ana
 
 ## Debugging an Analyzer with Visual Studio
 
-Newer versions of the Saleae software cannot be used to debug custom analyzers. This means that older versions of the software and SDK must be used if you wish to attach a debugger and step through your code.
+Newer versions of the Saleae software cannot be used to debug custom analyzers on Windows. This means that older versions of the software and SDK must be used if you wish to attach a debugger and step through your code. This complicates debugging on Windows, unfortunately, but it can be done.
 
 *Note: it is impossible to attach a debugger to any version of the software that supports the new products. We are working on a solution to this problem, but for now that means you must rely on the simulation data generator for your analyzer to produce captures you can then debug in the older software.*
 
-To debug your custom analyzer, we recommend you use the 1.1.14 SDK with the 1.1.18 software. Because older versions of the software and SDK are 32 bit only, you will only be able to compile for 32 bit initially. Later, when you build the analyzer with the latest version of the SDK, you will be able to compile for 32 bit and 64 bit.
+To debug your custom analyzer, you will need to download the 32-bit standalone copy of our older, 1.1.18 software.
 
-The SampleAnalyzer repository and the AnalyzerSDK repository have been setup to make switching versions of the SDK easy. The SampleAnalyzer repository has a branch named "1.1.14-for-win32-debug". This branch and the master branch have exactly the same source code - the only difference is the project settings and the AnalyzerSDK submodule reference, which now points to the 1.1.14 AnalyzerSDK. 
-
-Download the 32 bit stand-alone copy of the 1.1.18 software. The 32 bit standalone copy is required because the normal installer will not let you install the 32 bit software on a 64 bit operating system.
-
-Logic 1.1.18, 32 bit stand-alone:
 http://downloads.saleae.com/betas/1.1.18/Logic1.1.18BetaWin32Standalone.zip
 
-This is also convenient because you will not need to uninstall the latest Saleae Logic software, or install this version. Simply unzip and run the 1.1.18 software.
+This is a sandalone download and does not need to be installed. Just extract the zip file and run the contained Logic.exe.
 
 Please note - switching between Saleae Logic software versions has a tendency to reset the software's settings. This could cause the analyzer developer directory to get reset. If you no longer see your analyzer in the list, please verify that the analyzer developer directory is still set properly.
 
-To build and and debug your custom analyzer using the 1.1.14 sofware, follow these steps:
+To build and and debug your custom analyzer using the 1.1.14 software, follow these steps:
 
-- Switch to the "1.1.14-for-win32-debug" branch of the SampleAnalyzer repository.
 - Using Visual Studio, open the solution file in the Visual Studio Folder.
-- Switch the solution platform to from x64 to Win32. x64 is not able to build on this branch.
-- Build the debug configuration.
-- Launch the 1.1.18 32-bit Logic software. If the analyzer directory is not already configured, set that, and restart the software.
+- Select the solution configuration "Debug-Legacy-1.1.14"
+- Select the platform "Win32"
+- Build the solution
+- Launch the 1.1.18 32-bit Logic software. If the analyzer directory is not already configured, set that to the `Visual Studio\Win32\Debug-Legacy-1.1.14` directory, and restart the software.
 - The analyzer should now be visible in the list of analyzers you can add.
 - In visual studio, open the Debug Menu, and select "Attach to process..."
 - Locate Logic.exe in the list, select it, and click the Attach button.
-- Add a break point on any line near the top of the WorkerThread() function, such as line 27, *mSampleRateHz = GetSampleRate();*
+- Add a break point on any line near the top of the WorkerThread() function, such as line 27, mSampleRateHz = GetSampleRate();
 - In the Logic software, add your custom analyzer if you haven't already, and start a simulation.
-- The breakpoint should hit.
+- The breakpoint should hit
 
-
-**Updating to the latest SDK**
-
-Once you have finished debugging your analyzer using the "1.1.14-for-win32-debug" branch, we recommend committing your changes and then cherry-picking your commits to the master branch. Please do not simply merge changed into the master branch, as that may pick up other project settings not compatible with the latest SDK.
-
-In the future, we would like to simplify this even more, so branch switching is not required.
-
+Optionally you can change the debugger command in visual studio to point to the older Logic.exe binary. Then you will be able to start debugging simply by pressing run in Visual Studio.
 
 **Common issues on Windows**
 
