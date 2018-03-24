@@ -1,6 +1,3 @@
 [submodule "AnalyzerSDK"]
 	path = AnalyzerSDK
 	url = https://github.com/saleae/AnalyzerSDK.git
-[submodule "LegacyAnalyzerSDK"]
-	path = LegacyAnalyzerSDK
-	url = https://github.com/saleae/AnalyzerSDK.git
