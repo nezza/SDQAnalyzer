@@ -1,4 +1,4 @@
-= SDQAnalyzer =
+# SDQAnalyzer
 
 This is a simple analyzer for the SDQ protocol that is used on a lot of Apple products, for exapmle:
 
