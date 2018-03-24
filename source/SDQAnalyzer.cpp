@@ -28,42 +28,79 @@ void SDQAnalyzer::WorkerThread()
 
 	mSerial = GetAnalyzerChannelData( mSettings->mInputChannel );
 
+	// Skip over e.g. beginning low data
 	if( mSerial->GetBitState() == BIT_LOW )
 		mSerial->AdvanceToNextEdge();
 
-	U32 samples_per_bit = mSampleRateHz / mSettings->mBitRate;
-	U32 samples_to_first_center_of_first_data_bit = U32( 1.5 * double( mSampleRateHz ) / double( mSettings->mBitRate ) );
-
 	for( ; ; )
 	{
+		// std::cout << "ANALYZING\n";
 		U8 data = 0;
-		U8 mask = 1 << 7;
+		U8 mask = 1;
 		
-		mSerial->AdvanceToNextEdge(); //falling edge -- beginning of the start bit
+		U64 starting_sample = 0;
+		U64 frame_start = 0;
+		U64 bits = 0;
 
-		U64 starting_sample = mSerial->GetSampleNumber();
-
-		mSerial->Advance( samples_to_first_center_of_first_data_bit );
-
-		for( U32 i=0; i<8; i++ )
+		while(bits != 8)
 		{
-			//let's put a dot exactly where we sample this bit:
-			mResults->AddMarker( mSerial->GetSampleNumber(), AnalyzerResults::Dot, mSettings->mInputChannel );
+			// std::cout << ".";
+			mSerial->AdvanceToNextEdge(); // Go to first falling edge
 
-			if( mSerial->GetBitState() == BIT_HIGH )
+			starting_sample = mSerial->GetSampleNumber();
+
+			// Go to next raising edge
+			mSerial->AdvanceToNextEdge();
+			U64 raising_edge = mSerial->GetSampleNumber();
+
+			U64 diff = raising_edge - starting_sample;
+			double time_seconds = double(diff)/double(mSampleRateHz);
+
+			ReportProgress( mSerial->GetSampleNumber() );
+
+			if(bits == 0) {
+				frame_start = mSerial->GetSampleNumber();
+			}
+
+			double bitrate = double(mSettings->mBitRate);
+			// The 0 low flank is roughly 0.000_00655 uS
+			double FALSE_TIME = (1.0/bitrate) * 0.644;
+			double TRUE_TIME = (1.0/bitrate) * 0.175;
+			double RESET_TIME = (1.0/bitrate) * 1.33;
+
+			// ca. +/- 1 microsecond at 98425 baud
+			double MATCH_PRECISION = (1.0/bitrate) * 0.098;
+
+			if(std::abs(time_seconds - RESET_TIME) < MATCH_PRECISION)
+			{
+				mResults->AddMarker(mSerial->GetSampleNumber(), AnalyzerResults::Square, mSettings->mInputChannel);
+
+				data = 0;
+				mask = 1;
+				bits = 0;
+			} else if(std::abs(time_seconds - FALSE_TIME) < MATCH_PRECISION)
+			{
+				mResults->AddMarker(mSerial->GetSampleNumber(), AnalyzerResults::UpArrow, mSettings->mInputChannel);
+				bits += 1;
+
+				mask = mask << 1;
+			} else if(std::abs(time_seconds - TRUE_TIME) < MATCH_PRECISION) {
+				mResults->AddMarker(mSerial->GetSampleNumber(), AnalyzerResults::DownArrow, mSettings->mInputChannel);
 				data |= mask;
+				bits += 1;
 
-			mSerial->Advance( samples_per_bit );
+				mask = mask << 1;
+			} else {
+				mResults->AddMarker(mSerial->GetSampleNumber(), AnalyzerResults::ErrorDot, mSettings->mInputChannel);
+			}
 
-			mask = mask >> 1;
 		}
-
-
+	
 		//we have a byte to save. 
 		Frame frame;
 		frame.mData1 = data;
 		frame.mFlags = 0;
-		frame.mStartingSampleInclusive = starting_sample;
+		frame.mStartingSampleInclusive = frame_start;
 		frame.mEndingSampleInclusive = mSerial->GetSampleNumber();
 
 		mResults->AddFrame( frame );

@@ -4,14 +4,14 @@
 
 SDQAnalyzerSettings::SDQAnalyzerSettings()
 :	mInputChannel( UNDEFINED_CHANNEL ),
-	mBitRate( 9600 )
+	mBitRate( 98425 )
 {
 	mInputChannelInterface.reset( new AnalyzerSettingInterfaceChannel() );
-	mInputChannelInterface->SetTitleAndTooltip( "Serial", "Standard SDQ (Lightning)" );
+	mInputChannelInterface->SetTitleAndTooltip( "SDQ (Lightning)", "Standard SDQ (Lightning)" );
 	mInputChannelInterface->SetChannel( mInputChannel );
 
 	mBitRateInterface.reset( new AnalyzerSettingInterfaceInteger() );
-	mBitRateInterface->SetTitleAndTooltip( "Bit Rate (Bits/S)",  "Specify the bit rate in bits per second." );
+	mBitRateInterface->SetTitleAndTooltip( "Bit Rate (Bits/S)",  "Specify the bit rate in bits per second. (For lightning: 98425)" );
 	mBitRateInterface->SetMax( 6000000 );
 	mBitRateInterface->SetMin( 1 );
 	mBitRateInterface->SetInteger( mBitRate );
@@ -24,7 +24,7 @@ SDQAnalyzerSettings::SDQAnalyzerSettings()
 	AddExportExtension( 0, "csv", "csv" );
 
 	ClearChannels();
-	AddChannel( mInputChannel, "Serial", false );
+	AddChannel( mInputChannel, "SDQ", false );
 }
 
 SDQAnalyzerSettings::~SDQAnalyzerSettings()
