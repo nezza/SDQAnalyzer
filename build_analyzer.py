@@ -41,7 +41,11 @@ os.chdir( ".." )
 #specify the search paths/dependencies/options for gcc
 include_paths = [ "./AnalyzerSDK/include" ]
 link_paths = [ "./AnalyzerSDK/lib" ]
-link_dependencies = [ "-lAnalyzer64" ] #refers to libAnalyzer.dylib or libAnalyzer.so
+if platform.system().lower() == "darwin":
+    link_dependencies = [ "-lAnalyzer" ]
+else:
+    link_dependencies = [ "-lAnalyzer64" ]
+
 
 debug_compile_flags = "-O0 -w -c -fpic -g"
 release_compile_flags = "-O3 -w -c -fpic"

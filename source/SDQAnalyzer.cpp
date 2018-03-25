@@ -2,6 +2,8 @@
 #include "SDQAnalyzerSettings.h"
 #include <AnalyzerChannelData.h>
 
+#include <cmath>
+
 SDQAnalyzer::SDQAnalyzer()
 :	Analyzer2(),  
 	mSettings( new SDQAnalyzerSettings() ),
