@@ -1,0 +1,71 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    tags:
+      - "*"
+  pull_request:
+    branches: [master]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: |
+          cmake -B ${{github.workspace}}/build -A x64
+          cmake --build ${{github.workspace}}/build --config Release
+      - name: Upload windows build
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows
+          path: ${{github.workspace}}/build/Analyzers/Release/*.dll
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: |
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build ${{github.workspace}}/build
+      - name: Upload MacOS build
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos
+          path: ${{github.workspace}}/build/Analyzers/*.so
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: |
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build ${{github.workspace}}/build
+      - name: Upload Linux build
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux
+          path: ${{github.workspace}}/build/Analyzers/*.so
+  publish:
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: download individual builds
+        uses: actions/download-artifact@v2
+        with:
+          path: ${{github.workspace}}/artifacts
+      - name: zip
+        run: |
+          cd ${{github.workspace}}/artifacts
+          zip -r ${{github.workspace}}/analyzer.zip .
+      - uses: actions/upload-artifact@v2
+        with:
+          name: all-platforms
+          path: ${{github.workspace}}/artifacts/**
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{github.workspace}}/analyzer.zip
