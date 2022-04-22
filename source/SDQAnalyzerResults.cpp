@@ -60,14 +60,12 @@ void SDQAnalyzerResults::GenerateExportFile( const char* file, DisplayBase displ
 
 void SDQAnalyzerResults::GenerateFrameTabularText( U64 frame_index, DisplayBase display_base )
 {
-#ifdef SUPPORTS_PROTOCOL_SEARCH
 	Frame frame = GetFrame( frame_index );
 	ClearTabularText();
 
 	char number_str[128];
 	AnalyzerHelpers::GetNumberString( frame.mData1, display_base, 8, number_str, 128 );
 	AddTabularText( number_str );
-#endif
 }
 
 void SDQAnalyzerResults::GeneratePacketTabularText( U64 packet_id, DisplayBase display_base )

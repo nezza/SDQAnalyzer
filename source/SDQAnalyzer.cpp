@@ -10,6 +10,7 @@ SDQAnalyzer::SDQAnalyzer()
 	mSimulationInitilized( false )
 {
 	SetAnalyzerSettings( mSettings.get() );
+	UseFrameV2();
 }
 
 SDQAnalyzer::~SDQAnalyzer()
@@ -104,6 +105,11 @@ void SDQAnalyzer::WorkerThread()
 		frame.mFlags = 0;
 		frame.mStartingSampleInclusive = frame_start;
 		frame.mEndingSampleInclusive = mSerial->GetSampleNumber();
+
+
+		FrameV2 frame_v2;
+		frame_v2.AddByte("value", data);
+		mResults->AddFrameV2( frame_v2, "byte", frame.mStartingSampleInclusive, frame.mEndingSampleInclusive );
 
 		mResults->AddFrame( frame );
 		mResults->CommitResults();
