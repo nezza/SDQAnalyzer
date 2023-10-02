@@ -35,85 +35,97 @@ void SDQAnalyzer::WorkerThread()
 	if( mSerial->GetBitState() == BIT_LOW )
 		mSerial->AdvanceToNextEdge();
 
-	for( ; ; )
-	{
-		// std::cout << "ANALYZING\n";
-		U8 data = 0;
-		U8 mask = 1;
-		
-		U64 starting_sample = 0;
-		U64 frame_start = 0;
-		U64 bits = 0;
+	uint64_t lastSample = mSerial->GetSampleNumber();
+	int lastSampleIsHighEdge = 0;
 
-		while(bits != 8)
-		{
-			// std::cout << ".";
-			mSerial->AdvanceToNextEdge(); // Go to first falling edge
+	uint64_t watchwindow = (21e-6)*mSampleRateHz;
 
-			starting_sample = mSerial->GetSampleNumber();
+	while (1){
+		uint8_t data = 0;
+		uint8_t bits = 0;
+		uint64_t break_pos = 0;
+		uint64_t curSample = 0;
+		uint64_t curLastSample = 0;
+		uint64_t frame_starts[10] = {};
+		int hasAdvanced = 1;
 
-			// Go to next raising edge
-			mSerial->AdvanceToNextEdge();
-			U64 raising_edge = mSerial->GetSampleNumber();
+		while (1){
+			if (bits >=8 && !mSerial->WouldAdvancingCauseTransition(watchwindow)) break;
+			if (!hasAdvanced) lastSampleIsHighEdge = !lastSampleIsHighEdge;
+			if (bits == 8 && !mSerial->WouldAdvancingCauseTransition(watchwindow)){
+				curSample += watchwindow;
+				hasAdvanced = 0;
+			}else{
+				mSerial->AdvanceToNextEdge(); // to falling endge
+				hasAdvanced = 1;
+				curSample = mSerial->GetSampleNumber();
+			}
+			// printf("curSample=%llu next=%llu\n",curSample,mSerial->GetSampleOfNextEdge());
 
-			U64 diff = raising_edge - starting_sample;
+			curLastSample = lastSample;
+			U64 diff = curSample - lastSample;
 			double time_seconds = double(diff)/double(mSampleRateHz);
+			lastSample = curSample;
+			lastSampleIsHighEdge = !lastSampleIsHighEdge;
 
-			ReportProgress( mSerial->GetSampleNumber() );
+			if (lastSampleIsHighEdge){
+				//high duration
+				if (time_seconds > 11e-6){
+					//bad duration
+					break;
+				}
+				mResults->AddMarker(curSample, AnalyzerResults::Dot, mSettings->mInputChannel);
+			}else{
+				//low duration
+				if (time_seconds > 20e-6){
+					//bad duration
+					break;
+				}
 
-			if(bits == 0) {
-				frame_start = mSerial->GetSampleNumber();
+				if (time_seconds > 10e-6){
+					if (bits){
+						//bad duration
+						break;
+					}else{
+						//encountered break
+						break_pos = curSample;
+						mResults->AddMarker(curSample, AnalyzerResults::Square, mSettings->mInputChannel);
+					}
+				}else{
+					//encountered bit
+					if (bits<sizeof(frame_starts)/sizeof(*frame_starts)) frame_starts[bits] = curLastSample;
+					bits++;
+					data >>= 1;
+					if (time_seconds > 5e-6){
+						mResults->AddMarker(curSample, AnalyzerResults::UpArrow, mSettings->mInputChannel);
+					}else{
+						mResults->AddMarker(curSample, AnalyzerResults::DownArrow, mSettings->mInputChannel);
+						data |= 0x80;
+					}
+				}
 			}
-
-			double bitrate = double(mSettings->mBitRate);
-			// The 0 low flank is roughly 0.000_00655 uS
-			double FALSE_TIME = (1.0/bitrate) * 0.644;
-			double TRUE_TIME = (1.0/bitrate) * 0.175;
-			double RESET_TIME = (1.0/bitrate) * 1.33;
-
-			// ca. +/- 1 microsecond at 98425 baud
-			double MATCH_PRECISION = (1.0/bitrate) * 0.098;
-
-			if(std::abs(time_seconds - RESET_TIME) < MATCH_PRECISION)
-			{
-				mResults->AddMarker(mSerial->GetSampleNumber(), AnalyzerResults::Square, mSettings->mInputChannel);
-
-				data = 0;
-				mask = 1;
-				bits = 0;
-			} else if(std::abs(time_seconds - FALSE_TIME) < MATCH_PRECISION)
-			{
-				mResults->AddMarker(mSerial->GetSampleNumber(), AnalyzerResults::UpArrow, mSettings->mInputChannel);
-				bits += 1;
-
-				mask = mask << 1;
-			} else if(std::abs(time_seconds - TRUE_TIME) < MATCH_PRECISION) {
-				mResults->AddMarker(mSerial->GetSampleNumber(), AnalyzerResults::DownArrow, mSettings->mInputChannel);
-				data |= mask;
-				bits += 1;
-
-				mask = mask << 1;
-			} else {
-				mResults->AddMarker(mSerial->GetSampleNumber(), AnalyzerResults::ErrorDot, mSettings->mInputChannel);
-			}
-
 		}
-	
-		//we have a byte to save. 
-		Frame frame;
-		frame.mData1 = data;
-		frame.mFlags = 0;
-		frame.mStartingSampleInclusive = frame_start;
-		frame.mEndingSampleInclusive = mSerial->GetSampleNumber();
+		if (bits >= 8){
+			//we have a byte to save. 
+			Frame frame;
+			frame.mData1 = data;
+			frame.mFlags = 0;
+			frame.mStartingSampleInclusive = frame_starts[bits-8];
+			frame.mEndingSampleInclusive = curLastSample;
 
+			if (!frame.mStartingSampleInclusive){
+				// printf("bad frame data=0x%08x curSample=%llu\n",data,curSample);
+				continue;
+			}
 
-		FrameV2 frame_v2;
-		frame_v2.AddByte("value", data);
-		mResults->AddFrameV2( frame_v2, "byte", frame.mStartingSampleInclusive, frame.mEndingSampleInclusive );
+			FrameV2 frame_v2;
+			frame_v2.AddByte("value", data);
+			mResults->AddFrameV2( frame_v2, "byte", frame.mStartingSampleInclusive, frame.mEndingSampleInclusive );
 
-		mResults->AddFrame( frame );
-		mResults->CommitResults();
-		ReportProgress( frame.mEndingSampleInclusive );
+			mResults->AddFrame( frame );
+			mResults->CommitResults();
+			ReportProgress( frame.mEndingSampleInclusive );
+		}
 	}
 }
 
